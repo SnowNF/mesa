@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <xf86drm.h>
 
 #include "msm_kgsl.h"
 #include "vk_util.h"
@@ -1374,8 +1375,8 @@ kgsl_device_check_status(struct tu_device *device)
    return VK_SUCCESS;
 }
 
-static const struct tu_knl kgsl_knl_funcs = {
-      .name = "kgsl",
+static const struct tu_knl kgsl_drm_knl_funcs = {
+      .name = "kgsl_drm",
 
       .device_init = kgsl_device_init,
       .device_finish = kgsl_device_finish,
@@ -1395,13 +1396,40 @@ static const struct tu_knl kgsl_knl_funcs = {
 };
 
 VkResult
-tu_knl_kgsl_load(struct tu_instance *instance, int fd)
+tu_knl_kgsl_load(struct tu_instance *instance, int fd,
+                 struct tu_physical_device **out);
+
+VkResult
+tu_knl_kgsl_drm_load(struct tu_instance *instance,
+                     struct _drmVersion *version,
+                     struct tu_physical_device **out,
+                     const char *path)
 {
-   if (instance->vk.enabled_extensions.KHR_display) {
+   int kgsl_fd;
+
+   kgsl_fd = open(path, O_RDWR | O_CLOEXEC);
+   if (kgsl_fd < 0) {
+      if (errno == ENOENT)
+         return VK_ERROR_INCOMPATIBLE_DRIVER;
+
       return vk_errorf(instance, VK_ERROR_INITIALIZATION_FAILED,
-                       "I can't KHR_display");
+                       "failed to open device %s", path);
    }
 
+   VkResult result = tu_knl_kgsl_load(instance, kgsl_fd, out);
+   if (result != VK_SUCCESS) {
+      close(kgsl_fd);
+      return result;
+   }
+   struct tu_physical_device * device = *out;
+   device->msm_major_version = version->version_major;
+   device->msm_minor_version = version->version_minor;
+
+   return result;
+}
+VkResult
+tu_knl_kgsl_load(struct tu_instance *instance, int fd,
+                 struct tu_physical_device **out){
    struct tu_physical_device *device = (struct tu_physical_device *)
       vk_zalloc(&instance->vk.alloc, sizeof(*device), 8,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
@@ -1452,13 +1480,13 @@ tu_knl_kgsl_load(struct tu_instance *instance, int fd)
              (KGSL_CACHEMODE_WRITEBACK << KGSL_CACHEMODE_SHIFT));
    device->has_cached_non_coherent_memory = true;
 
-   instance->knl = &kgsl_knl_funcs;
+   instance->knl = &kgsl_drm_knl_funcs;
 
    result = tu_physical_device_init(device, instance);
    if (result != VK_SUCCESS)
       goto fail;
 
-   list_addtail(&device->vk.link, &instance->vk.physical_devices.list);
+   *out = device;
 
    return VK_SUCCESS;
 

@@ -247,6 +247,10 @@ tu_physical_device_try_create(struct vk_instance *vk_instance,
 #ifdef TU_HAS_VIRTIO
       result = tu_knl_drm_virtio_load(instance, fd, version, &device);
 #endif
+   } else if (strcmp(version->name, "msm_drm") == 0) {
+      if (TU_DEBUG(STARTUP))
+         mesa_log(MESA_LOG_INFO, "TU_MOD", "select kgsl drm");
+      result = tu_knl_kgsl_drm_load(instance, version, &device, "/dev/kgsl-3d0");
    } else {
       result = vk_startup_errorf(instance, VK_ERROR_INCOMPATIBLE_DRIVER,
                                  "device %s (%s) is not compatible with turnip",

@@ -154,6 +154,11 @@ tu_bo_get_ref(struct tu_bo *bo)
    p_atomic_inc(&bo->refcnt);
    return bo;
 }
+VkResult
+tu_knl_kgsl_drm_load(struct tu_instance *instance,
+                     struct _drmVersion *version,
+                     struct tu_physical_device **out,
+                     const char *path);
 
 VkResult tu_knl_kgsl_load(struct tu_instance *instance, int fd);
 
