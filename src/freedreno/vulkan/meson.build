@@ -89,6 +89,12 @@ if freedreno_kmds.contains('msm')
   tu_deps += dep_libdrm
 endif
 
+if freedreno_kmds.contains('kgsl-drm')
+  tu_flags += '-DTU_HAS_KGSL_DRM'
+  libtu_files += files('tu_knl_kgsl_drm.cc')
+  tu_deps += dep_libdrm
+endif
+
 if freedreno_kmds.contains('virtio')
   tu_flags += '-DTU_HAS_VIRTIO'
   libtu_files += files('tu_knl_drm_virtio.cc', 'tu_knl_drm.cc')
