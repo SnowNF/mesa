@@ -21,6 +21,7 @@ enum tu_bo_alloc_flags
    TU_BO_ALLOC_ALLOW_DUMP = 1 << 0,
    TU_BO_ALLOC_GPU_READ_ONLY = 1 << 1,
    TU_BO_ALLOC_REPLAYABLE = 1 << 2,
+   TU_BO_ALLOC_SHAREABLE = 1 << 3,
 };
 
 /* Define tu_timeline_sync type based on drm syncobj for a point type
@@ -53,6 +54,7 @@ struct tu_bo {
    uint32_t bo_list_idx;
 
    bool implicit_sync : 1;
+   int dmabuf_fd;
 };
 
 struct tu_knl {
